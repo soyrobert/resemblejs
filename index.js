@@ -31,7 +31,13 @@ const getDirectories = (source) =>
 // Función para obtener imágenes PNG de una carpeta
 const getImages = (source) =>
   fs.readdirSync(source)
-    .filter(file => file.endsWith('.png'));
+    .filter(file => file.endsWith('.png'))
+    .sort((a, b) => {
+      // Extrae los números de los nombres de los archivos para el ordenamiento
+      const numA = parseInt(a.match(/paso(\d+)/i)[1], 10);
+      const numB = parseInt(b.match(/paso(\d+)/i)[1], 10);
+      return numA - numB;
+    });
 
 // Función de comparación de imágenes que devuelve una promesa
 const compareImages = (image1, image2, diffImageName) => {
@@ -59,22 +65,16 @@ const processVersionsAndScenarios = async () => {
   <html lang="en">
   <head>
   <meta charset="UTF-8">
-  <title>Image Comparison Report</title>
+  <title>Image Comparison Report Grupo 3</title>
   <style>
-    body { margin: 0; padding: 0; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; text-align: center; }
-    th { background-color: #4CAF50; color: white; }
-    td { background-color: #f2f2f2; }
-    .image-container { padding: 5px; }
-    img { max-width: 300px; height: auto; }
-    .scenario-header { background-color: #f7f7f7; padding: 20px; font-size: 20px; text-align: left; margin-top: 20px; }
+    body { margin: 0; padding: 40px; }
+    table { margin-bottom: 40px; }
   </style>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
   </head>
   <body>
   <h1>Image Comparison Report</h1>
-  `;
+  <p> <strong>Porcentaje de desajuste:</strong> >= ${threshold}</p>`;
 
   const versions = getDirectories('.');
 
@@ -91,7 +91,10 @@ const processVersionsAndScenarios = async () => {
       const imagesVersion1 = getImages(path.join(version1, scenario));
       const imagesVersion2 = getImages(path.join(version2, scenario));
 
-      reportHtml += `<div class="scenario-header">Scenario: ${scenario}</div>`;
+      if (imagesVersion1.length > 0 && imagesVersion2.length > 0) {
+        reportHtml += `<h2 class="scenario-header">Scenario: ${scenario}</h2>`;
+      }
+
 
       for (let j = 0; j < imagesVersion1.length; j++) {
         const image1Path = path.join(version1, scenario, imagesVersion1[j]);
@@ -100,20 +103,24 @@ const processVersionsAndScenarios = async () => {
 
         const result = await compareImages(image1Path, image2Path, diffImageName);
         if (result) {
+          const firstImageName = imagesVersion1[j].split('.')[0];
+          reportHtml += `<h3 class="step-header">Step: ${firstImageName}</h3>`;
           reportHtml += `
-          <table>
-            <tr>
-              <th>${version1} Image</th>
-              <th>${version2} Image</th>
-              <th>Diff Image</th>
-              <th>Mismatch%</th>
-            </tr>
-            <tr>
-              <td class="image-container"><img src="../${image1Path}" alt="${version1} Image"/></td>
-              <td class="image-container"><img src="../${image2Path}" alt="${version2} Image"/></td>
-              <td class="image-container"><img src="../${result.diffImagePath}" alt="Diff Image"/></td>
-              <td>${result.data.misMatchPercentage}</td>
-            </tr>
+          <table class="table table-bordered">
+            <thead class="table-dark">
+              <tr>
+                <th scope="col">${version1} Image</th>
+                <th scope="col">${version2} Image</th>
+                <th scope="col">Diff Image</th>
+              </tr>
+            <thead>
+            <tbody>
+              <tr>
+                <td class="image-container"><img src="../${image1Path}" alt="${version1} Image" class="img-fluid"/></td>
+                <td class="image-container"><img src="../${image2Path}" alt="${version2} Image" class="img-fluid"/></td>
+                <td class="image-container"><img src="../${result.diffImagePath}" alt="Diff Image" class="img-fluid"/></td>
+              </tr>
+            </tbody>
           </table>
           `;
         }
